@@ -42,6 +42,22 @@
             </v-stepper-content>
             <v-stepper-content class="mx-n2 mt-n6" step="2">
               <v-card-text class="mt-n5 ml-n4 mt-n2 mt-n2 grey--text">
+                Enter your 2fa pin
+              </v-card-text>
+              <v-alert type="error" v-if="error" class="mt-n2" color="red">
+                That code isn't valid</v-alert
+              >
+              <v-otp-input
+                  @input="error = false"
+                  length="6"
+                  v-model="code"
+                ></v-otp-input>
+                <v-btn elevation="0" class="mt-3 ml-auto" @click="finish2fa" color="success">
+                  Login
+                </v-btn>
+            </v-stepper-content>
+            <v-stepper-content class="mx-n2 mt-n6" step="3">
+              <v-card-text class="mt-n5 ml-n4 mt-n2 mt-n2 grey--text">
                 Boom!
               </v-card-text>
               <v-row class="mx-auto mb-5 mt-5">
@@ -57,6 +73,8 @@
           </v-stepper-items>
         </v-stepper>
       </v-card>
+            <p class="text-center grey--text mt-2"> ©Tovy 2022 </p>
+
     </v-container>
   </div>
 </template>
@@ -69,6 +87,7 @@ export default {
     username: "",
     password: "",
     valid: true,
+    code: "",
     error: false,
     group: "",
     name: "",
@@ -84,7 +103,7 @@ export default {
       this.$router.push(`/signup${this.$route.query.invite ? `?invite=${this.$route.query.invite}` : ''}`);
     },
     dog() {
-      this.e1 = 2;
+      this.e1 = 3;
       this.$refs.form.validate();
       if (!this.valid) return;
       this.$http
@@ -97,7 +116,11 @@ export default {
           },
           { withCredentials: true }
         )
-        .catch(() => {
+        .catch((er) => {
+          if (er?.response?.data?.message === '2fa required') {
+            this.error = false
+            return this.e1 = 2;
+          }
           this.error = true;
           setTimeout(() => {
             this.e1 = 1;
@@ -117,7 +140,41 @@ export default {
             }, 1000);
           });
         });
-    },
+    }, finish2fa() {
+      this.e1 = 3;
+      this.$http
+        .post(
+          "/finish2fa",
+          {
+            code: this.code,
+          },
+          { withCredentials: true }
+        )
+        .catch((er) => {
+          console.log('yes')
+          console.log(er?.response?.data?.message)
+          this.error = true;
+          setTimeout(() => {
+            this.e1 = 2;
+          }, 500);
+          return;
+        })
+        .then((res) => {
+          if (!res) return;
+          this.$http.get("/profile", { withCredentials: true }).then((response) => {
+            if (!response) return;
+            response.data.info.pfp = response.data.pfp;
+            this.$store.commit("setuser", response.data.info);
+            this.$store.commit("setgroup", response.data.group);
+            this.$store.commit("set2fa", response.data['2fa']);
+
+            setTimeout(() => {
+              this.$router.push("/");
+            }, 1000);
+          });
+        });
+
+    }
   },
 };
 </script>

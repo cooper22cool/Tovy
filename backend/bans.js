@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require("./db/db");
 const noblox = require("noblox.js");
 
-const erouter = (usernames, pfps, settings, permissions, logging) => {
+const erouter = (cacheEngine, settings, permissions, logging) => {
   const perms = permissions.perms;
   router.get("/bans", async (req, res) => {
     let bans = await db.ban.find({});
@@ -17,7 +17,7 @@ const erouter = (usernames, pfps, settings, permissions, logging) => {
       return res.status(400).json({ error: "No username provided." });
     if ((!until && perm == false) || perm == null)
       return res.status(400).json({ error: "No date provided." });
-    const id = await noblox.getIdFromUsername(username);
+    const id = await noblox.getIdFromUsername(username).catch(e => null);
     if (!id) {
       res.status(400).json({ message: "No such user!" });
       return;
